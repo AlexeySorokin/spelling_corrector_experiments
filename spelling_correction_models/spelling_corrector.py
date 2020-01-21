@@ -1,4 +1,5 @@
 from typing import Iterable
+import sys
 
 import joblib
 
@@ -18,16 +19,22 @@ def read_dictionary(infile):
 
 class HypothesisSearcher:
 
-    def __init__(self, words: Iterable[str]=None, max_distance: float=1, searcher_path=None):
-        if words is not None:
-            words = list({word.strip().lower().replace('ё', 'е') for word in words})
-            self.alphabet = sorted({letter for word in words for letter in word})
-            self.searcher = LevenshteinSearcher(self.alphabet, words, allow_spaces=True, euristics=2)
-            joblib.dump(self.searcher, searcher_path, compress=9)
+    def __init__(self, data=None, max_distance: float=1, searcher_path=None):
+        if isinstance(data, LevenshteinSearcher):
+            print("Loading searcher...")
+            self.searcher = data
+            self.alphabet = self.searcher.alphabet
+            if searcher_path is not None:
+                joblib.dump(self.searcher, searcher_path, compress=9)
+        elif isinstance(data, (list, set)):
+            data = list({word.strip().lower().replace('ё', 'е') for word in data})
+            self.alphabet = sorted({letter for word in data for letter in word})
+            self.searcher = LevenshteinSearcher(self.alphabet, data, allow_spaces=True, euristics=2)
+            if searcher_path is not None:
+                joblib.dump(self.searcher, searcher_path, compress=9)
         else:
             self.searcher = joblib.load(searcher_path)
-            self.alphabet = "".join(chr(x) for x in range(ord("а"), ord("я")+1)) + "ё"
-            # self.alphabet = sorted({letter for word in self.searcher.dictionary.words() for letter in word})
+            self.alphabet = self.searcher.alphabet
         self.max_distance = max_distance
 
     def _preprocess_sent(self, sent):
@@ -62,10 +69,11 @@ class HypothesisSearcher:
 
 
 if __name__ == "__main__":
-    words = read_dictionary("data/wordforms.txt")
-    searcher = HypothesisSearcher(words=None, searcher_path="dump/trie.out")
+    # words = read_dictionary("data/wordforms.txt")
+    searcher = joblib.load("dump/trie.out")
+    model = HypothesisSearcher(searcher)
     sent = "Я довно живу с права от станций"
-    corrections, words = searcher.process_sentence(sent)
+    corrections, words = model.process_sentence(sent)
     for i, candidates in enumerate(corrections):
         for j, other, cost in candidates:
             print(i, j, "_".join(words[i:j]), other.replace(" ", "_"), "{:.1f}".format(cost))
