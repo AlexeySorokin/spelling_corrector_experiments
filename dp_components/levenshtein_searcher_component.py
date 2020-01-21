@@ -46,7 +46,7 @@ class LevenshteinSearcherComponent(Component):
 
         if not operation_costs:
             operation_costs = generate_operation_costs_dict(alphabet=alphabet)
-        self.searcher = LevenshteinSearcher(alphabet, words, allow_spaces=True, euristics=2,
+        self.searcher = LevenshteinSearcher(alphabet, words, allow_spaces=True, euristics=0,
                                             operation_costs=operation_costs)
 
     def _infer_instance(self, tokens: Iterable[str]) -> List[List[Tuple[float, str]]]:

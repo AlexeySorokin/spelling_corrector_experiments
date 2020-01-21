@@ -278,11 +278,11 @@ def align_sents(source, correct, return_only_different=False, replace_cost=1.0, 
             answer.append(((prev[0], m), (prev[1], n)))
     return answer
 
-def test(task=1):
+def test(task=0):
     if task == 0:
         first_sent = ['фотка', 'классная', 'кстате', 'хоть', 'и', 'не', 'по', 'теме']
         second_sent = ['фотка', 'классная', 'кстати', 'хотя', 'не', 'по', 'теме']
-        align_sents(first_sent, second_sent, replace_cost=1.9)
+        print(align_sents(first_sent, second_sent, replace_cost=1.5))
     elif task == 1:
         first, second = 'жж', 'ж'
         align_sents(first, second)

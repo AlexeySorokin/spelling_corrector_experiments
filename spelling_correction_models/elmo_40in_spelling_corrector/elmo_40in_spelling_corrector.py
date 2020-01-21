@@ -1,8 +1,12 @@
 import re
 from copy import deepcopy
-################# Universal Import ###################################################
+
+
 import sys
 import os
+import ujson as json
+
+from deeppavlov.core.data.utils import download
 
 SELF_DIR = os.path.dirname(os.path.abspath(__file__))
 PREROOT_DIR = os.path.dirname(SELF_DIR)
@@ -168,46 +172,11 @@ class ELMO40inSpellingCorrector():
 
         if not mini_batch_size:
             mini_batch_size = 10
-        self.elmo_config = {
-            "chainer": {
-                "in": [
-                    "sentences"
-                ],
-                "pipe": [
-                    {
-                        "in": ["sentences"],
-                        "class_name": "lazy_tokenizer",
-                        "out": ["tokens"]
-                    },
-                    {
-                        "class_name": "elmo_bilm",
-                        "mini_batch_size": mini_batch_size,
-                        "in": [
-                            "tokens"
-                        ],
-                        "model_dir": "bidirectional_lms/%s" % selected_model_dir,
-                        "out": [
-                            "pred_tokens"
-                        ]
-                    }
-                ],
-                "out": [
-                    "pred_tokens"
-                ]
-            },
-            "metadata": {
-                "requirements": [
-                    "../dp_requirements/tf.txt",
-                    "../dp_requirements/elmo.txt"
-                ],
-                "download": [
-                    {
-                        "url": "http://files.deeppavlov.ai/deeppavlov_data/%s" % selected_model_targz,
-                        "subdir": "bidirectional_lms/"
-                    }
-                ]
-            }
-        }
+        with open("config/elmo_config.json", "r") as fin:
+            self.elmo_config = json.load(fin)
+            self.elmo_config["chainer"]["pipe"][-1]["mini_batch_size"] = mini_batch_size
+            self.elmo_config["chainer"]["pipe"][-1]["model_dir"] = os.path.join("bidirectional_lms", selected_model_dir)
+            self.elmo_config["metadata"]["download"][0]["url"] = "http://files.deeppavlov.ai/deeppavlov_data/" + selected_model_targz
         instance = ELMOLM(self.elmo_config)
         return instance
 
@@ -228,7 +197,7 @@ class ELMO40inSpellingCorrector():
                 self.words_dict = dict_file.read().splitlines()
         except Exception as e:
             #download it, then read it again
-            from deeppavlov.core.data.utils import download
+
 
             download(path_to_dictionary, URL_TO_WORDFORMS, force_download=False)
             with open(path_to_dictionary, "r") as dict_file:
