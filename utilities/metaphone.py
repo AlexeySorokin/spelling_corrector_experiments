@@ -95,12 +95,14 @@ def transform(word):
     # печатаем буквы, сохранённые в состояниях и не выданные в ответ
     if state in [7, 13, 14, 16, 17]:
         answer.append(state)
+    answer = [x for i, x in enumerate(answer) if i == 0 or x != answer[i-1]]
     variants = [[i] if i != 4 else [1, 3] for i in answer]
-    answer = [list(elem) for elem in product(*variants)]
+    answer = [tuple(elem) for elem in product(*variants)]
     return answer
 
 if __name__ == "__main__":
-    words = ['хотеться', 'хочется', 'хотеца', 'хочеца', 'миллион',
+    words = ['остается', 'остаетсо',  "остаеться", "остаеццо",
+             'хотеться', 'хочется', 'хотеца', 'хочеца', 'миллион',
              'мильон', 'вариант', 'варьянт', 'иерей',  'район']
     for word in words:
         print(word, transform(word))
