@@ -8,15 +8,18 @@ import joblib
 from deeppavlov.models.spelling_correction.levenshtein.levenshtein_searcher import LevenshteinSearcher, Trie, make_default_operation_costs
 
 from utilities.read import read_dictionary
+from utilities.metaphone import transform
 
 class HypothesisSearcher:
 
     def __init__(self, data=None, max_distance: float=1, searcher_path=None,
-                 metaphone_data=None, use_metaphone=False, metaphone_score=1.0,
-                 duplication_cost=None):
+                 word_replacement_data=None, metaphone_data=None, use_metaphone=False,
+                 metaphone_score=1.0, duplication_cost=None):
         self.max_distance = max_distance
-        self.metaphone_data = None
+        self.word_replacement_data = word_replacement_data or dict()
+        self.metaphone_data = metaphone_data
         self.use_metaphone = use_metaphone
+        self.metaphone_score = metaphone_score
         if data is None and searcher_path is not None:
             data = joblib.load(searcher_path)
         if isinstance(data, (Trie, list, set)):
@@ -33,7 +36,8 @@ class HypothesisSearcher:
                 joblib.dump(self.searcher.dictionary, searcher_path, compress=9)
         else:
             raise TypeError("`data` must be a collection of words or a Trie instance.")
-        
+
+
     @property
     def alphabet(self):
         return self.searcher.alphabet
@@ -56,7 +60,7 @@ class HypothesisSearcher:
         else:
             words = sent[:]
         normalized_words, sent_punctuation = [], defaultdict(list)
-        for r, word in enumerate(sent):
+        for r, word in enumerate(words):
             normalized_word = word.lower().replace("ё", "е")
             if normalized_word not in string.punctuation:
                 normalized_words.append(normalized_word)
@@ -85,13 +89,18 @@ class HypothesisSearcher:
         answer = [None] * len(words)
         for i, word in enumerate(words):
             answer[i] = {(i+1, word, 0.0)}
+            for correction in self.word_replacement_data.get(word, []):
+                answer[i].add((i+1, correction, 1.0))
             if not self._can_be_corrected(word):
                 continue
             candidates = self.searcher.search(word, d=self.max_distance)
             for candidate, cost in candidates:
                 answer[i].add((i+1, candidate, cost))
             if self.use_metaphone and self._to_generate_metaphone_candidate(word):
-                pass
+                metaphone_codes = transform(word)
+                for code in metaphone_codes:
+                    for other in self.metaphone_data.get(code, []):
+                        answer[i].add((i+1, other, self.metaphone_score))
             if i < len(words)-1 and i not in blocked_positions:
                 candidates = self.searcher.search(word + " " + words[i+1], d=self.max_distance)
                 for candidate, cost in candidates:

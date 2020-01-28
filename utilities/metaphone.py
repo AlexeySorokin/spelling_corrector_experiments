@@ -55,14 +55,18 @@ def transform(word):
                 answer.append(17)
         # обрабатываем следующую букву
         if letter in VOWELS:
-            if state in [1, 3, 4]:
-                continue
-            if state not in [1, 3, 4, 14, 15, 16, 17, 18]:
-                new_state = VOWELS[letter]
-            elif state in [14, 15, 18]:
+            new_state = VOWELS[letter]
+            # if state not in [1, 3, 4, 14, 15, 16, 17, 18]:
+            #     new_state = VOWELS[letter]
+            if state in [14, 15, 18]:
                 new_state = 3
             elif state in [16, 17]:
                 new_state = 1
+            elif new_state == state:
+                continue
+            elif state in [3,4] and new_state == 1:
+                continue
+            # исправить для мильон-миллион-район-раен-раён
             answer.append(new_state)
             state = new_state
         elif letter in SIMPLE_CONSONANTS:
@@ -103,7 +107,8 @@ def transform(word):
 if __name__ == "__main__":
     words = ['остается', 'остаетсо',  "остаеться", "остаеццо",
              'хотеться', 'хочется', 'хотеца', 'хочеца', 'миллион',
-             'мильон', 'вариант', 'варьянт', 'иерей',  'район']
+             'мильон', 'вариант', 'варьянт', 'иерей',  'район',
+             'раёна', 'района']
     for word in words:
         print(word, transform(word))
 
