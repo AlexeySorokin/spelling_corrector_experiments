@@ -6,11 +6,10 @@ import numpy as np
 from deeppavlov import build_model, configs
 from deeppavlov.dataset_readers.morphotagging_dataset_reader import read_infile
 
-sents, _ = map(list, zip(*(read_infile("/data/Data/UD2.3/UD_Russian-SynTagRus/ru_syntagrus-ud-test.conllu"))))
-test_sents = sents[5:8]
+sents, _ = map(list, zip(*(read_infile("/home/Data/UD2.3/UD_Russian-SynTagRus/ru_syntagrus-ud-test.conllu"))))
+test_sents = [x[:10] for x in sents[:32]]
 # print([len(sent) for sent in test_sents])
-# sys.exit()
-elmo_lm = build_model("elmo_ru_news")
+elmo_lm = build_model("config/elmo_ru_news.json")
 elmo_lm["main"].output_layer = "softmax"
 elmo_lm["main"].single_pass = False
 # sents = ["Мама долго мыла грязную раму", "Пусть светит месяц , ночь темна", "В университете учится много студентов"]
