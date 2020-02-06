@@ -14,5 +14,5 @@ if __name__ == "__main__":
             word_codes = transform(word)
             word_codes = [",".join(map(str, elem)) for elem in word_codes]
             fout.write("{}\t{}\n".format(word, " ".join(word_codes)))
-            if (r + 1) % 10000 == 0:
-                print("{} words processed.".format(r+1))
+            # if (r + 1) % 10000 == 0:
+            #     print("{} words processed.".format(r+1))

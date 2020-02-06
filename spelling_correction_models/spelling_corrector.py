@@ -1,4 +1,6 @@
 import sys
+import os
+sys.path.append(os.getcwd())
 import string
 from collections import defaultdict
 
@@ -142,45 +144,49 @@ class LMSpellingCorrector:
         N = len(data)
         processed_sents = [_preprocess_sent(sent) for sent in data]
         order = sorted(range(N), key=(lambda n: len(data[n][0])))
-        answer, corrections = [None] * N, [None] * N
+        answer, corrections, handlers = [None] * N, [None] * N, [None] * N
         for start in range(0, N, batch_size):
             curr_indexes = order[start:start+batch_size]
             batch = [processed_sents[i] for i in curr_indexes]
-            curr_answer, curr_corrections = self.__call__(batch, return_corrections=True, to_preprocess=False)
+            curr_answer, curr_corrections, curr_handlers = self.__call__(batch, return_corrections=True, to_preprocess=False)
             for i, index in enumerate(curr_indexes):
-                answer[index], corrections[index] = curr_answer[i], curr_corrections[i]
+                answer[index], corrections[index], handlers[index] = curr_answer[i], curr_corrections[i], curr_handlers[i]
         if return_corrections:
-            return answer, corrections
+            return answer, corrections, handlers
         return answer
 
-    def _generate_sent_candidates(self, words, candidates_data):
+    def _generate_sent_candidates(self, candidates_data, words):
         words_to_search = [[word] for word in words]
         words_to_search_indexes = [{word: 0} for word in words]
         hypotheses_list = []
         for i, curr_candidates in enumerate(candidates_data):
-            for j, word, correction, _, _ in curr_candidates:
+            for j, correction, _, _ in curr_candidates:
                 correction_words = correction.split()
                 left, right = correction_words[0], correction_words[-1]
-                left_index = words_to_search_indexes[i].get(left, len(words_to_search[i]))
-                if left_index == len(words_to_search[i]):
+                left_length, right_length = len(words_to_search[i]), len(words_to_search[j-1])
+                left_index = words_to_search_indexes[i].get(left, left_length)
+                if left_index == left_length:
+                    words_to_search_indexes[i][left] = left_length
                     words_to_search[i].append(left)
-                right_index = words_to_search_indexes[i].get(right, len(words_to_search[j-1]))
-                if right_index == len(words_to_search[j-1]):
+                right_index = words_to_search_indexes[j-1].get(right, right_length)
+                if right_index == right_length:
+                    words_to_search_indexes[j-1][right] = right_length
                     words_to_search[j-1].append(right)
-                hypotheses_list.append({"begin": i, "end": j, "word": word, "correction": correction,
-                                        "left_index": left_index, "right_index": right_index, "cost": 0.0})
+                hypotheses_list.append({"begin": i, "end": j-1, "word": " ".join(words[i:j]), 
+                                        "correction": correction, "left_index": left_index, 
+                                        "right_index": right_index, "cost": 0.0})
         return words_to_search, hypotheses_list
 
     def _generate_candidates(self, data):
         data_for_searcher = [(elem[0], elem[2]) for elem in data]
-        search_data = [self.searcher.process_sentence(*elem, to_preprocess=False, to_return_preprocessed=True)
+        search_data = [self.searcher.process_sentence(*elem, to_preprocess=False, 
+                                                      to_return_preprocessed=True)
                        for elem in data_for_searcher]
-        candidates, hypotheses = [], []
+        answer = []
         for elem in search_data:
             words_to_search, curr_hypotheses = self._generate_sent_candidates(*elem)
-            candidates.append(words_to_search)
-            hypotheses.append(curr_hypotheses)
-        return HypothesesHandler(candidates, hypotheses)
+            answer.append(HypothesesHandler(words_to_search, curr_hypotheses))
+        return answer
 
     def __call__(self, data, return_corrections=False, to_preprocess=True):
         if to_preprocess:
@@ -195,7 +201,7 @@ class LMSpellingCorrector:
         hypotheses_handlers = self._generate_candidates(processed_data)
         corrections = [[] for _ in sents]
         for step in range(self.max_corrections):
-            active_sent_indexes = np.where(are_sents_active)
+            active_sent_indexes = np.where(are_sents_active)[0]
             if len(active_sent_indexes) == 0:
                 break
             active_sents = [sents[i] for i in active_sent_indexes]
@@ -211,23 +217,22 @@ class LMSpellingCorrector:
                 else:
                     are_sents_active[index] = False
         if return_corrections:
-            return corrected_sents, corrections
+            return corrected_sents, corrections, hypotheses_handlers
         else:
             return corrected_sents
 
 
-
-
-
 if __name__ == "__main__":
-    words = read_dictionary("data/wordforms_clear.txt")
+    # words = read_dictionary("data/wordforms_clear.txt")
     metaphone_data = read_metaphone_file("data/metaphone_codes_clear.out")
-    # trie = joblib.load("dump/trie.out")
-    model = HypothesisSearcher(data=None, searcher_path="data/wordforms_clear.trie",
-                               use_metaphone=True, metaphone_data=metaphone_data)
-    # model = HypothesisSearcher(searcher)
+    trie = joblib.load("data/wordforms_clear.trie")
+    # model = HypothesisSearcher(data=None, searcher_path="data/wordforms_clear.trie",
+    #                            use_metaphone=True, metaphone_data=metaphone_data)
+    model = LMSpellingCorrector("configs/elmo_ru_predictor.json", data=trie,
+                                use_metaphone=True, metaphone_data=metaphone_data)
     sent = "Кто-то довно хочет поселицца с права отменя"
-    corrections, words = model.process_sentence(sent)
-    for i, candidates in enumerate(corrections):
-        for j, other, cost, key in candidates:
-            print(i, j, "_".join(words[i:j]), other.replace(" ", "_"), "{:.1f}".format(cost), key)
+    corrected_sents, sent_corrections = model([sent], return_corrections=True)
+    with open("log.out", "w", encoding="utf8") as fout:
+        for elem in sorted(sent_corrections[0].archive[0], key=lambda x: -x["gain"]):
+            fout.write(str(elem) + "\n")
+    
