@@ -229,7 +229,7 @@ if __name__ == "__main__":
     trie = joblib.load("data/wordforms_clear.trie")
     # model = HypothesisSearcher(data=None, searcher_path="data/wordforms_clear.trie",
     #                            use_metaphone=True, metaphone_data=metaphone_data)
-    model = LMSpellingCorrector("configs/elmo_ru_predictor.json", data=trie,
+    model = LMSpellingCorrector("config/elmo_ru_predictor.json", data=trie,
                                 use_metaphone=True, metaphone_data=metaphone_data)
     sent = "кто-то довно хочет поселицца с права отменя ."
     corrected_sents, sent_corrections, handlers = model([sent], return_corrections=True)
