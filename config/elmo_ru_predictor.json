@@ -1,0 +1,49 @@
+{
+  "chainer": {
+    "in": [
+      "sentences", "candidates"
+    ],
+    "pipe": [
+      {
+        "in": ["sentences"],
+        "class_name": "lazy_tokenizer",
+        "out": ["tokens"]
+      },
+      {
+        "id": "main",
+        "class_name": "elmo_probability_predictor",
+        "mini_batch_size": 4,
+        "single_pass": true,
+        "init_states_before_all": false,
+        "in": [
+          "tokens", "candidates"
+        ],
+        "model_dir": "{DOWNLOADS_PATH}/bidirectional_lms/elmo_ru_news",
+        "out": [
+          "probs"
+        ]
+      }
+    ],
+    "out": [
+      "probs"
+    ]
+  },
+  "metadata": {
+    "variables": {
+      "ROOT_PATH": "~/.deeppavlov",
+      "DOWNLOADS_PATH": "{ROOT_PATH}/downloads",
+      "MODELS_PATH": "{ROOT_PATH}/models",
+      "RESULTS_PATH": "{ROOT_PATH}/results"
+    },
+    "requirements": [
+      "{DEEPPAVLOV_PATH}/requirements/tf-hub.txt",
+      "{DEEPPAVLOV_PATH}/requirements/elmo.txt"
+    ],
+    "download": [
+      {
+        "url": "http://files.deeppavlov.ai/deeppavlov_data/lm_elmo_ru_news.tar.gz",
+        "subdir": "{DOWNLOADS_PATH}/bidirectional_lms/"
+      }
+    ]
+  }
+}
