@@ -163,11 +163,12 @@ class LMSpellingCorrector:
             for j, correction, _, _ in curr_candidates:
                 correction_words = correction.split()
                 left, right = correction_words[0], correction_words[-1]
-                left_length, right_length = len(words_to_search[i]), len(words_to_search[j-1])
+                left_length = len(words_to_search[i])
                 left_index = words_to_search_indexes[i].get(left, left_length)
                 if left_index == left_length:
                     words_to_search_indexes[i][left] = left_length
                     words_to_search[i].append(left)
+                right_length = len(words_to_search[j-1])
                 right_index = words_to_search_indexes[j-1].get(right, right_length)
                 if right_index == right_length:
                     words_to_search_indexes[j-1][right] = right_length
@@ -230,9 +231,9 @@ if __name__ == "__main__":
     #                            use_metaphone=True, metaphone_data=metaphone_data)
     model = LMSpellingCorrector("configs/elmo_ru_predictor.json", data=trie,
                                 use_metaphone=True, metaphone_data=metaphone_data)
-    sent = "Кто-то довно хочет поселицца с права отменя"
-    corrected_sents, sent_corrections = model([sent], return_corrections=True)
+    sent = "кто-то довно хочет поселицца с права отменя ."
+    corrected_sents, sent_corrections, handlers = model([sent], return_corrections=True)
     with open("log.out", "w", encoding="utf8") as fout:
-        for elem in sorted(sent_corrections[0].archive[0], key=lambda x: -x["gain"]):
+        for elem in sorted(handlers[0].archive[0], key=lambda x: -x["gain"]):
             fout.write(str(elem) + "\n")
     
